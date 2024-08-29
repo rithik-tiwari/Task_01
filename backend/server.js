@@ -146,10 +146,10 @@ app.post('/upload', upload.single('file'), async (req, res) => {
       const newFile = new File(row);
       await newFile.save();
     }
-    res.send(`File ${req.file.filename} uploaded, data validated, converted to JSON, and saved successfully.`);
+    res.json({ message: `File ${req.file.filename} uploaded, data validated, converted to JSON, and saved successfully.` });
   } catch (error) {
     console.error(error);
-    res.status(500).send('Error processing the file.');
+    res.status(500).json({ message: 'Error processing the file.' });
   }
 });
 
