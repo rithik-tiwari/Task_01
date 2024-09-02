@@ -1,4 +1,6 @@
 const Joi = require('joi');
+const mongoose = require('mongoose');
+const File = require('../datamongo/data')
 // Define the Joi schema matching your Mongoose schema
 const fileSchema = Joi.object({
   PONumber: Joi.number().integer().required(),

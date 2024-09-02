@@ -46,7 +46,7 @@ const s3 = new AWS.S3({
 });
 
 // Create a bucket if it doesn't exist
-const bucketName = 'my-test-bucket';
+const bucketName = 'my-bucket';
 s3.createBucket({ Bucket: bucketName }, (err) => {
   if (err && err.code !== 'BucketAlreadyOwnedByYou') {
     console.error('Error creating S3 bucket', err);
@@ -56,14 +56,7 @@ s3.createBucket({ Bucket: bucketName }, (err) => {
 });
 
 // Configure multer for file uploads
-const storage = multer.diskStorage({
-  destination: (req, file, cb) => {
-    cb(null, 'uploads/'); // Directory to save the uploaded files
-  },
-  filename: (req, file, cb) => {
-    cb(null, file.fieldname + '-' + Date.now() + path.extname(file.originalname));
-  }
-});
+const storage = multer.memoryStorage();
 const upload = multer({
   storage: storage,
   fileFilter: (req, file, cb) => {
@@ -92,7 +85,7 @@ if (!postgresUri) {
   process.exit(1);
 }
 //mongoose connection
-mongoose.connect('mongodb://localhost:27017/mydatabase', {
+mongoose.connect(mongoUri, {
   useNewUrlParser: true,
   useUnifiedTopology: true
 });
@@ -122,41 +115,71 @@ app.post('/api', async (req, res) => {
 // File upload route
 app.post('/upload', upload.single('file'), async (req, res) => {
   if (req.fileValidationError) {
-    return res.status(400).send(req.fileValidationError);
+    return res.status(400).json({ message: req.fileValidationError });
   }
   if (!req.file) {
-    return res.status(400).send('No file uploaded.');
+    return res.status(400).json({ message: 'No file uploaded.' });
   }
   try {
-    // Read and parse the Excel file
-    const workbook = XLSX.readFile(req.file.path);
-    const sheetName = workbook.SheetNames[0]; // Get the first sheet
+    const params = {
+      Bucket: 'my-bucket',
+      Key: req.file.originalname,
+      Body: req.file.buffer,
+      ContentType: req.file.mimetype,
+    };
+
+    // Upload file to S3
+    await s3.upload(params).promise();
+    console.log(`File uploaded: ${req.file.originalname}`);
+
+    // Read and parse the Excel file from buffer
+    const workbook = XLSX.read(req.file.buffer);
+    const sheetName = workbook.SheetNames[0];
     const sheet = workbook.Sheets[sheetName];
-    const data = XLSX.utils.sheet_to_json(sheet); // Convert sheet to JSON
-    console.log('data is---------> ' ,data);
+    const data = XLSX.utils.sheet_to_json(sheet);
+    console.log('Parsed data:', data);
+
     // Validate and save each row of data to MongoDB
+    // for (const row of data) {
+    //   const { value, error } = fileSchema.validate(row);
+    //   if (error) {
+    //     console.error('Validation error:', error.details);
+    //     continue;
+    //   }
+    //   await File.create({
+    //     name: req.file.originalname,
+    //     data: row
+    //   });
+    // }
+    const bulkOps = [];
     for (const row of data) {
-      // Validate the row data using the Joi schema
       const { error } = fileSchema.validate(row);
       if (error) {
-        console.error('Validation error:', error.details);
-        continue; // Skip this row if validation fails
+        console.error('Validation error:', error.details.map(detail => detail.message).join(', '));
+        continue;
       }
-      // Create a new document using the row data
-      const newFile = new File(row);
-      await newFile.save();
+      bulkOps.push({
+        updateOne: {
+          filter: { name: row.name }, // or other unique identifier
+          update: { $set: { data: row } },
+          upsert: true
+        }
+      });
     }
-    res.json({ message: `File ${req.file.filename} uploaded, data validated, converted to JSON, and saved successfully.` });
+
+    res.json({ message: `File ${req.file.originalname} uploaded, data validated, converted to JSON, and saved successfully.` });
   } catch (error) {
-    console.error(error);
-    res.status(500).json({ message: 'Error processing the file.' });
+    console.error('Error in file upload or processing:', error);
+    res.status(500).json({ message: 'Error processing the file.', error: error.message });
   }
 });
 
+
+// Route to list files in S3 bucket
 app.get('/files', async (req, res) => {
   try {
     const params = {
-      Bucket: 'my-test-bucket' // Replace with your bucket name
+      Bucket: 'my-bucket' // Replace with your bucket name
     };
     const data = await s3.listObjects(params).promise();
     const files = data.Contents.map(file => ({
@@ -174,7 +197,7 @@ app.get('/files', async (req, res) => {
 app.use((err, req, res, next) => {
   console.error('Unhandled error:', err);
   console.error('Error stack:', err.stack);
-  res.status(500).json({ 
+  res.status(500).json({
     message: 'An unexpected error occurred',
     error: err.message,
     stack: err.stack
