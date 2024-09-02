@@ -112,6 +112,8 @@ const pgPool = new Pool({ connectionString: postgresUri });
 app.post('/api', async (req, res) => {
   res.status(200).send('ok');
 })
+
+app.use(express.static('public'));
 // File upload route
 app.post('/upload', upload.single('file'), async (req, res) => {
   if (req.fileValidationError) {
@@ -174,6 +176,9 @@ app.post('/upload', upload.single('file'), async (req, res) => {
   }
 });
 
+app.get('/sample-excel-format.xlsx', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public/sample-excel-format.xlsx'));
+});
 
 // Route to list files in S3 bucket
 app.get('/files', async (req, res) => {
