@@ -43,30 +43,13 @@ export default {
         console.error(error);
       }
     },
-    async downloadShipmentsFile() {
-      try {
-        // Make a GET request to fetch the file as a Blob
-        const response = await axios.get('../', {
-          responseType: 'blob'
-        });
-
-        // Create a URL for the Blob object
-        const url = window.URL.createObjectURL(new Blob([response.data]));
-
-        // Create an anchor element and simulate a click to start the download
-        const link = document.createElement('a');
-        link.href = url;
-        link.setAttribute('download', 'shipments.xlsx');
-        document.body.appendChild(link);
-        link.click();
-
-        // Clean up
-        link.parentNode.removeChild(link);
-        window.URL.revokeObjectURL(url);
-      } catch (error) {
-        this.message = 'Error downloading file. Please try again.';
-        console.error(error);
-      }
+    downloadShipmentsFile() {
+      const link = document.createElement('a');
+      link.href = 'http://localhost:3000/files/sample-file.xlsx'; // Correct URL to match your server route
+      link.download = 'sample-file.xlsx'; // Filename for the downloaded file
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
     }
   }
 };

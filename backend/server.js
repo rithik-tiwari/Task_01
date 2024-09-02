@@ -10,6 +10,8 @@ const File = require('./datamongo/data');
 const fs = require('fs');
 const path = require('path');
 const AWS = require('aws-sdk');
+const sequelize = require('./config/databasepostgress');
+const FilePostgress = require('./models/FilePostgress');
 require('dotenv').config();
 const fileSchema = require('./joi_validatioin/valid')
 
@@ -73,17 +75,17 @@ const excelQueue = new Bull('excelProcessing');
 
 // Database connections
 const mongoUri = process.env.MONGODB_URI;
-const postgresUri = process.env.POSTGRES_URI;
+// const postgresUri = process.env.POSTGRES_URI;
 
 if (!mongoUri) {
   console.error('MONGODB_URI is not set in the environment variables');
   process.exit(1);
 }
 
-if (!postgresUri) {
-  console.error('POSTGRES_URI is not set in the environment variables');
-  process.exit(1);
-}
+// if (!postgresUri) {
+//   console.error('POSTGRES_URI is not set in the environment variables');
+//   process.exit(1);
+// }
 //mongoose connection
 mongoose.connect(mongoUri, {
   useNewUrlParser: true,
@@ -102,7 +104,15 @@ db.once('open', () => {
 //     process.exit(1);
 //   });
 
-const pgPool = new Pool({ connectionString: postgresUri });
+sequelize.authenticate()
+  .then(() => {
+    console.log('PostgreSQL database & tables created !!');
+  })
+  .catch(err => {
+    console.error('Unable to connect to the postgresql database : ',err);
+  });
+
+// const pgPool = new Pool({ connectionString: postgresUri });
 // pgPool.connect()
 //   .then(() => console.log('Connected to PostgreSQL'))
 //   .catch(err => {
@@ -176,8 +186,14 @@ app.post('/upload', upload.single('file'), async (req, res) => {
   }
 });
 
-app.get('/sample-excel-format.xlsx', (req, res) => {
-  res.sendFile(path.join(__dirname, 'public/sample-excel-format.xlsx'));
+app.get('/files/sample-file.xlsx', (req, res) => {
+  const filePath = path.join(__dirname, 'shipments.xlsx'); // Adjust path as needed
+  res.download(filePath, 'sample-file.xlsx', (err) => {
+    if (err) {
+      console.error('Error sending file:', err);
+      res.status(500).send('Error downloading file. Please try again.');
+    }
+  });
 });
 
 // Route to list files in S3 bucket
