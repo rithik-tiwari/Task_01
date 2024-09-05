@@ -11,7 +11,7 @@ const fs = require('fs');
 const path = require('path');
 const AWS = require('aws-sdk');
 const sequelize = require('./config/databasepostgress');
-const FilePostgress = require('./models/FilePostgress');
+const FilePostgress = require('./models/schema/postgresSchema');
 require('dotenv').config();
 const fileSchema = require('./joi_validatioin/valid')
 
@@ -71,10 +71,13 @@ const upload = multer({
 });
 
 // Configure Bull queue
-const excelQueue = new Bull('excelProcessing');
+// const excelQueue = new Bull('excelProcessing');
+const postgresQueue = new Bull('postgresQueue');
+const mongoQueue = new Bull('mongoQueue');
 
 // Database connections
 const mongoUri = process.env.MONGODB_URI;
+console.log("🚀 ~ mongoUri:", mongoUri)
 // const postgresUri = process.env.POSTGRES_URI;
 
 if (!mongoUri) {
@@ -87,22 +90,12 @@ if (!mongoUri) {
 //   process.exit(1);
 // }
 //mongoose connection
-mongoose.connect(mongoUri, {
-  useNewUrlParser: true,
-  useUnifiedTopology: true
-});
-const db = mongoose.connection;
-db.on('error', console.error.bind(console, 'connection error:'));
-db.once('open', () => {
+mongoose.connect(mongoUri);
+
+mongoose.connection.on('connected', () => {
   console.log('Connected to MongoDB');
 });
 
-// mongoose.connect(mongoUri)
-//   .then(() => console.log('Connected to MongoDB'))
-//   .catch(err => {
-//     console.error('Failed to connect to MongoDB', err);
-//     process.exit(1);
-//   });
 
 sequelize.authenticate()
   .then(() => {
@@ -126,43 +119,18 @@ app.post('/api', async (req, res) => {
 app.use(express.static('public'));
 // File upload route
 app.post('/upload', upload.single('file'), async (req, res) => {
-  if (req.fileValidationError) {
-    return res.status(400).json({ message: req.fileValidationError });
-  }
   if (!req.file) {
     return res.status(400).json({ message: 'No file uploaded.' });
   }
+  // converting to json
   try {
-    const params = {
-      Bucket: 'my-bucket',
-      Key: req.file.originalname,
-      Body: req.file.buffer,
-      ContentType: req.file.mimetype,
-    };
-
-    // Upload file to S3
-    await s3.upload(params).promise();
-    console.log(`File uploaded: ${req.file.originalname}`);
-
-    // Read and parse the Excel file from buffer
     const workbook = XLSX.read(req.file.buffer);
     const sheetName = workbook.SheetNames[0];
     const sheet = workbook.Sheets[sheetName];
     const data = XLSX.utils.sheet_to_json(sheet);
-    console.log('Parsed data:', data);
+    console.log(data);
 
-    // Validate and save each row of data to MongoDB
-    // for (const row of data) {
-    //   const { value, error } = fileSchema.validate(row);
-    //   if (error) {
-    //     console.error('Validation error:', error.details);
-    //     continue;
-    //   }
-    //   await File.create({
-    //     name: req.file.originalname,
-    //     data: row
-    //   });
-    // }
+    // Validate data
     const bulkOps = [];
     for (const row of data) {
       const { error } = fileSchema.validate(row);
@@ -170,21 +138,29 @@ app.post('/upload', upload.single('file'), async (req, res) => {
         console.error('Validation error:', error.details.map(detail => detail.message).join(', '));
         continue;
       }
-      bulkOps.push({
-        updateOne: {
-          filter: { name: row.name }, // or other unique identifier
-          update: { $set: { data: row } },
-          upsert: true
-        }
-      });
+      bulkOps.push(row);
     }
 
-    res.json({ message: `File ${req.file.originalname} uploaded, data validated, converted to JSON, and saved successfully.` });
+    // Upload the JSON file to Fake S3
+    const params = {
+      Bucket: bucketName,
+      Key: `${req.file.originalname}.json`,
+      Body: JSON.stringify(bulkOps),
+      ContentType: 'application/json'
+    };
+    await s3.upload(params).promise();
+
+    // Add a job to the queue for processing
+    await postgresQueue.add({ filename: `${req.file.originalname}.json`, data });
+    await mongoQueue.add({ filename: `${req.file.originalname}.json`, data });
+
+    res.json({ message: `File ${req.file.originalname} uploaded, validated, and queued for processing.` });
   } catch (error) {
     console.error('Error in file upload or processing:', error);
     res.status(500).json({ message: 'Error processing the file.', error: error.message });
   }
 });
+
 
 app.get('/files/sample-file.xlsx', (req, res) => {
   const filePath = path.join(__dirname, 'shipments.xlsx'); // Adjust path as needed
@@ -203,6 +179,7 @@ app.get('/files', async (req, res) => {
       Bucket: 'my-bucket' // Replace with your bucket name
     };
     const data = await s3.listObjects(params).promise();
+    console.log(data);
     const files = data.Contents.map(file => ({
       key: file.Key,
       lastModified: file.LastModified,
@@ -212,6 +189,29 @@ app.get('/files', async (req, res) => {
   } catch (error) {
     console.error(error);
     res.status(500).send('Error retrieving files from S3.');
+  }
+});
+
+
+// Route to fetch data from PostgreSQL
+app.get('/data/postgres', async (req, res) => {
+  try {
+    const data = await FilePostgress.findAll();
+    res.json(data);
+  } catch (error) {
+    console.error('Error fetching data from PostgreSQL:', error);
+    res.status(500).json({ message: 'Error fetching data from PostgreSQL.', error: error.message });
+  }
+});
+
+// Route to fetch data from MongoDB
+app.get('/data/mongo', async (req, res) => {
+  try {
+    const data = await File.find();
+    res.json(data);
+  } catch (error) {
+    console.error('Error fetching data from MongoDB:', error);
+    res.status(500).json({ message: 'Error fetching data from MongoDB.', error: error.message });
   }
 });
 

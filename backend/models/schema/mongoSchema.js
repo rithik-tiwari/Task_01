@@ -1,8 +1,8 @@
-// models/schemas/File.js
 const mongoose = require('mongoose');
 const { Schema } = mongoose;
-const fileSchema = new Schema({
-  id: { type: Number, required: false },
+require('dotenv').config();
+const mongoSchema = new Schema({
+  id: { type: Number,autoincrement:true, required: true },
   po_number: { type: Number, required: true },
   container_no: { type: Number, required: true },
   hscode: { type: String, required: true },
@@ -17,11 +17,8 @@ const fileSchema = new Schema({
   volume_unit: { type: Number, required: true },
   invoice_number: { type: Number, required: true },
   pallet_no: { type: Number, required: true },
-//   createdAt: { type: Date, required: false },
-//   updatedAt: { type: Date, required: false }
+//   createdAt: { type: Date, required: true },
+//   updatedAt: { type: Date, required: true }
 });
-const File = mongoose.model('File', fileSchema);
-module.exports = File;
-
-
-
+const mongoFile = mongoose.model('File', mongoSchema);
+module.exports = mongoFile;

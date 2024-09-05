@@ -1,21 +1,22 @@
 const Joi = require('joi');
-const mongoose = require('mongoose');
-const File = require('../datamongo/data')
 // Define the Joi schema matching your Mongoose schema
 const fileSchema = Joi.object({
-  PONumber: Joi.number().integer().required(),
-  ContainerNo: Joi.number().integer().required(),
-  HSCode: Joi.string().required(),
-  MaterialCode: Joi.string().required(),
-  MaterialName: Joi.string().required(),
-  Quantity: Joi.number().positive().required(),
-  QuantityUnit: Joi.number().required(),
-  NetWeight: Joi.number().positive().required(),
-  GrossWeight: Joi.number().positive().required(),
-  WeightUnit: Joi.number().required(), // Assuming units might be string
-  Volume: Joi.number().positive().required(),
-  VolumeUnit: Joi.number().required(), // Assuming units might be string
-  InvoiceNumber: Joi.number().integer().required(),
-  PalletNo: Joi.number().integer().required(),
+  id: Joi.number().integer().required(),
+  po_number: Joi.number().integer().required(),
+  container_no: Joi.number().integer().required(),
+  hscode: Joi.string().required(),
+  material_code: Joi.string().required(),
+  material_name: Joi.string().required(),
+  quantity: Joi.number().positive().required(),
+  quantity_unit: Joi.number().required(),
+  net_weight: Joi.number().positive().required(),
+  gross_weight: Joi.number().positive().required(),
+  weight_unit: Joi.number().required(), // Assuming units might be string
+  volume: Joi.number().positive().required(),
+  volume_unit: Joi.number().required(), // Assuming units might be string
+  invoice_number: Joi.number().integer().required(),
+  pallet_no: Joi.number().integer().required(),
+  // createdAt:Joi.date().iso().required(),
+  // updatedAt:Joi.date().iso().required(),
 });
 module.exports=fileSchema;
