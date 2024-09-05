@@ -1,5 +1,4 @@
 const Joi = require('joi');
-// Define the Joi schema matching your Mongoose schema
 const fileSchema = Joi.object({
   id: Joi.number().integer().required(),
   po_number: Joi.number().integer().required(),
@@ -11,12 +10,10 @@ const fileSchema = Joi.object({
   quantity_unit: Joi.number().required(),
   net_weight: Joi.number().positive().required(),
   gross_weight: Joi.number().positive().required(),
-  weight_unit: Joi.number().required(), // Assuming units might be string
+  weight_unit: Joi.number().required(), 
   volume: Joi.number().positive().required(),
-  volume_unit: Joi.number().required(), // Assuming units might be string
+  volume_unit: Joi.number().required(), 
   invoice_number: Joi.number().integer().required(),
   pallet_no: Joi.number().integer().required(),
-  // createdAt:Joi.date().iso().required(),
-  // updatedAt:Joi.date().iso().required(),
 });
 module.exports=fileSchema;

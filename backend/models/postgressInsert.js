@@ -1,4 +1,3 @@
-// postgresqlInsert.js
 const { Sequelize, DataTypes } = require('sequelize');
 const sequelize = new Sequelize(
     process.env.DB_NAME,
@@ -33,20 +32,12 @@ const sequelize = new Sequelize(
     volume_unit: Sequelize.INTEGER,
     invoice_number: Sequelize.INTEGER,
     pallet_no: Sequelize.INTEGER,
-    //  created_at: {
-    //    type: Sequelize.DATE,
-    //    defaultValue: Sequelize.NOW,  //Ensure this line is present
-    //  },
-    //  updated_at: {
-    //      type: Sequelize.DATE,
-    //      defaultValue: Sequelize.NOW,  //Ensure this line is present
-    //    }
   }, {
-    timestamps: false// If you're managing timestamps manually
+    timestamps: false
   });
 async function insertIntoPostgreSQL(data) {
   try {
-    await sequelize.sync(); // Ensure the table exists
+    await sequelize.sync(); 
     await File.bulkCreate(data.map(row => ({
       id: row.id,
       po_number: row.po_number,
@@ -63,8 +54,6 @@ async function insertIntoPostgreSQL(data) {
       volume_unit: row.volume_unit,
       invoice_number: row.invoice_number,
       pallet_no: row.pallet_no,
-    // created_at: new Date(row.created_at),
-    // updated_at: new Date(row.updated_at)
     })));
     console.log('Data inserted into PostgreSQL successfully');
   } catch (error) {
