@@ -1,8 +1,7 @@
-// models/File.js
 const { DataTypes } = require('sequelize');
-const sequelize = require('../config/databasepostgress'); // Adjust path as necessary
+const sequelize = require('../config/databasepostgress'); 
 const FilePostgress = sequelize.define('File', {
-  // Define columns
+  
   name: {
     type: DataTypes.STRING,
     allowNull: false

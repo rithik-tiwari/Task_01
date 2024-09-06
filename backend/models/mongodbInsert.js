@@ -1,7 +1,6 @@
-// mongodbInsert.js
 const mongoose = require('mongoose');
 require('dotenv').config();
-const mongoFile = require('./schema/mongoSchema'); // Your Mongoose model
+const mongoFile = require('./schema/mongoSchema'); 
 
 async function insertIntoMongoDB(data) {
   try {
@@ -21,8 +20,6 @@ async function insertIntoMongoDB(data) {
       volume_unit: row.volume_unit,
       invoice_number: row.invoice_number,
       pallet_no: row.pallet_no,
-      // createdAt: new Date(row.createdAt),
-      // updatedAt: new Date(row.updatedAt)
     })));
     console.log('Data inserted into MongoDB successfully');
   } catch (error) {

@@ -1,6 +1,5 @@
-// postmodel.js
 const { Sequelize, DataTypes } = require('sequelize');
-const sequelize = require('../../config/databasepostgress'); // Adjust import as needed
+const sequelize = require('../../config/databasepostgress'); 
 const filePostgres = sequelize.define('File', {
   id: {
     type: DataTypes.INTEGER,
@@ -36,11 +35,11 @@ const filePostgres = sequelize.define('File', {
     allowNull: false
   },
   net_weight: {
-    type: DataTypes.INTEGER, // Changed to FLOAT to match the data type
+    type: DataTypes.INTEGER, 
     allowNull: false
   },
   gross_weight: {
-    type: DataTypes.INTEGER, // Changed to FLOAT to match the data type
+    type: DataTypes.INTEGER, 
     allowNull: false
   },
   weight_unit: {
@@ -48,7 +47,7 @@ const filePostgres = sequelize.define('File', {
     allowNull: false
   },
   volume: {
-    type: DataTypes.INTEGER, // Changed to FLOAT to match the data type
+    type: DataTypes.INTEGER, 
     allowNull: false
   },
   volume_unit: {
@@ -56,22 +55,14 @@ const filePostgres = sequelize.define('File', {
     allowNull: false
   },
   invoice_number: {
-    type: DataTypes.INTEGER, // Changed to STRING to match the data type
+    type: DataTypes.INTEGER, 
     allowNull: false
   },
   pallet_no: {
-    type: DataTypes.INTEGER, // Changed to STRING to match the data type
+    type: DataTypes.INTEGER, 
     allowNull: false
   },
-  //  created_at: {
-  //    type: Sequelize.DATE,
-  //    defaultValue: Sequelize.NOW,
-  //  },
-  //  updated_at: {
-  //    type: Sequelize.DATE,
-  //    defaultValue: Sequelize.NOW,
-  //  }
 }, {
-  timestamps: false, // Ensure Sequelize handles timestamps automatically
+  timestamps: false, 
 });
 module.exports = filePostgres;

@@ -30,13 +30,6 @@ const s3rver = new S3rver({
   directory: './fake-s3-storage'
 });
 
-// s3rver.run((err) => {
-//   if (err) {
-//     console.error('Error starting fake S3 server', err);
-//   } else {
-//     console.log('Fake S3 server is running on port 4569');
-//   }
-// });
 
 // Configure AWS SDK to use fake S3
 const s3 = new AWS.S3({
@@ -47,7 +40,7 @@ const s3 = new AWS.S3({
   signatureVersion: 'v4'
 });
 
-// Create a bucket if it doesn't exist
+// Create a bucket 
 const bucketName = 'my-bucket';
 s3.createBucket({ Bucket: bucketName }, (err) => {
   if (err && err.code !== 'BucketAlreadyOwnedByYou') {
@@ -71,25 +64,19 @@ const upload = multer({
 });
 
 // Configure Bull queue
-// const excelQueue = new Bull('excelProcessing');
 const postgresQueue = new Bull('postgresQueue');
 const mongoQueue = new Bull('mongoQueue');
 
 // Database connections
 const mongoUri = process.env.MONGODB_URI;
 console.log("🚀 ~ mongoUri:", mongoUri)
-// const postgresUri = process.env.POSTGRES_URI;
 
 if (!mongoUri) {
   console.error('MONGODB_URI is not set in the environment variables');
   process.exit(1);
 }
 
-// if (!postgresUri) {
-//   console.error('POSTGRES_URI is not set in the environment variables');
-//   process.exit(1);
-// }
-//mongoose connection
+
 mongoose.connect(mongoUri);
 
 mongoose.connection.on('connected', () => {
@@ -105,13 +92,7 @@ sequelize.authenticate()
     console.error('Unable to connect to the postgresql database : ',err);
   });
 
-// const pgPool = new Pool({ connectionString: postgresUri });
-// pgPool.connect()
-//   .then(() => console.log('Connected to PostgreSQL'))
-//   .catch(err => {
-//     console.error('Failed to connect to PostgreSQL', err);
-//     process.exit(1);
-//   });
+
 app.post('/api', async (req, res) => {
   res.status(200).send('ok');
 })
@@ -163,7 +144,7 @@ app.post('/upload', upload.single('file'), async (req, res) => {
 
 
 app.get('/files/sample-file.xlsx', (req, res) => {
-  const filePath = path.join(__dirname, 'shipments.xlsx'); // Adjust path as needed
+  const filePath = path.join(__dirname, 'shipments.xlsx'); 
   res.download(filePath, 'sample-file.xlsx', (err) => {
     if (err) {
       console.error('Error sending file:', err);
@@ -176,7 +157,7 @@ app.get('/files/sample-file.xlsx', (req, res) => {
 app.get('/files', async (req, res) => {
   try {
     const params = {
-      Bucket: 'my-bucket' // Replace with your bucket name
+      Bucket: 'my-bucket' 
     };
     const data = await s3.listObjects(params).promise();
     console.log(data);

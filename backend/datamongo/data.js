@@ -1,4 +1,3 @@
-// models/schemas/File.js
 const mongoose = require('mongoose');
 const { Schema } = mongoose;
 const fileSchema = new Schema({
@@ -17,8 +16,6 @@ const fileSchema = new Schema({
   volume_unit: { type: Number, required: true },
   invoice_number: { type: Number, required: true },
   pallet_no: { type: Number, required: true },
-//   createdAt: { type: Date, required: false },
-//   updatedAt: { type: Date, required: false }
 });
 const File = mongoose.model('File', fileSchema);
 module.exports = File;

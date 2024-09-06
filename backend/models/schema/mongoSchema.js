@@ -17,8 +17,6 @@ const mongoSchema = new Schema({
   volume_unit: { type: Number, required: true },
   invoice_number: { type: Number, required: true },
   pallet_no: { type: Number, required: true },
-//   createdAt: { type: Date, required: true },
-//   updatedAt: { type: Date, required: true }
 });
 const mongoFile = mongoose.model('File', mongoSchema);
 module.exports = mongoFile;

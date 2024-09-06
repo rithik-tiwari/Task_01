@@ -27,18 +27,13 @@ sequelize.authenticate()
 // Database connections
 const mongoUri = process.env.MONGODB_URI;
 console.log("🚀 ~ mongoUri:", mongoUri)
-// const postgresUri = process.env.POSTGRES_URI;
 
 if (!mongoUri) {
     console.error('MONGODB_URI is not set in the environment variables');
     process.exit(1);
 }
 
-// if (!postgresUri) {
-//   console.error('POSTGRES_URI is not set in the environment variables');
-//   process.exit(1);
-// }
-//mongoose connection
+
 mongoose.connect(mongoUri, {
     useNewUrlParser: true,
     useUnifiedTopology: false,

@@ -187,7 +187,7 @@ export default {
         const response = await axios.get('http://localhost:3000/data/mongo');
         this.mongoData = response.data;
         this.showMongoData = true;
-        this.showPostgresData = false; // Hide PostgreSQL data if it's visible
+        this.showPostgresData = false; 
       } catch (error) {
         console.error('Error fetching MongoDB data:', error);
       }
@@ -197,7 +197,7 @@ export default {
         const response = await axios.get('http://localhost:3000/data/postgres');
         this.postgresData = response.data;
         this.showPostgresData = true;
-        this.showMongoData = false; // Hide MongoDB data if it's visible
+        this.showMongoData = false; 
       } catch (error) {
         console.error('Error fetching PostgreSQL data:', error);
       }
@@ -207,7 +207,6 @@ export default {
 </script>
 
 <style scoped>
-/* General Container Styling */
 .container {
   margin-top: 100px;
   display: flex;
@@ -219,7 +218,6 @@ export default {
   font-family: 'Arial', sans-serif;
 }
 
-/* Navbar Styling */
 .navbar {
   width: 100%;
   background-color: white;
@@ -247,7 +245,6 @@ export default {
   font-weight: bold;
 }
 
-/* Upload Section Styling */
 .upload-section {
   display: flex;
   flex-direction: column;
@@ -261,14 +258,12 @@ export default {
   margin-top: 80px;
 }
 
-/* Heading Section Styling */
 .heading {
   font: bold;
   text-decoration: underline;
-  margin-top: 100px; /* Adjust if needed */
+  margin-top: 100px; 
 }
 
-/* File Input Styling */
 .file-input {
   margin-bottom: 20px;
   padding: 10px;
@@ -276,13 +271,11 @@ export default {
   border-radius: 5px;
 }
 
-/* Button Group Styling */
 .button-group {
   display: flex;
   gap: 15px;
 }
 
-/* Button Styling */
 .btn {
   border: none;
   padding: 12px 25px;
@@ -319,22 +312,20 @@ export default {
   background-color: #f57c00;
 }
 
-/* Message Styling */
 .message {
   margin-top: 20px;
   color: #5be20d;
   font-weight: bold;
 }
 
-/* Table Styling */
 .table-container {
   margin-top: 30px;
   width: 100%;
-  max-height: 400px; /* Set a maximum height for the table */
-  overflow-y: auto;  /* Allow vertical scrolling */
-  border: 1px solid #ddd; /* Add a border to the container */
+  max-height: 400px; 
+  overflow-y: auto;  
+  border: 1px solid #ddd; 
   padding: 10px;
-  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1); /* Optional shadow for better visibility */
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1); 
   background-color: white;
 }
 
