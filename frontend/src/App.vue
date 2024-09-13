@@ -26,10 +26,11 @@
       <div class="button-group">
         <button @click="fetchMongoData" class="btn btn-show">Show MongoDB Data</button>
         <button @click="fetchPostgresData" class="btn btn-show">Show PostgreSQL Data</button>
+        <button @click="fetchLocationData" class="btn btn-show">Show Location Data</button>
       </div>
 
       <!-- Shipment Data Tables -->
-      <div class="tables-container" v-if="showMongoData || showPostgresData">
+      <div class="tables-container" v-if="showMongoData || showPostgresData || showLocationData">
         <!-- MongoDB Data Table -->
         <div class="table-container" v-if="showMongoData">
           <h2>MongoDB Data</h2>
@@ -37,44 +38,44 @@
             <thead>
               <tr>
                 <th>ID</th>
-                <th>PO Number</th>
-                <th>Container No</th>
-                <th>HS Code</th>
+                <th>Shipment Type</th>
+                <th>Order Number</th>
+                <th>Order Type</th>
+                <th>Source Reference ID</th>
+                <th>Destination Reference ID</th>
+                <th>Primary Mode</th>
+                <th>Expected Delivery Date</th>
+                <th>Incoterm</th>
+                <th>Cargo Type</th>
                 <th>Material Code</th>
-                <th>Material Name</th>
                 <th>Quantity</th>
                 <th>Quantity Unit</th>
-                <th>Net Weight</th>
-                <th>Gross Weight</th>
-                <th>Weight Unit</th>
-                <th>Volume</th>
-                <th>Volume Unit</th>
-                <th>Invoice Number</th>
-                <th>Pallet No</th>
+                <th>Shipment Number</th>
               </tr>
             </thead>
             <tbody>
               <tr v-for="shipment in mongoData" :key="shipment.id">
-                <td>{{ shipment.id }}</td>
-                <td>{{ shipment.po_number }}</td>
-                <td>{{ shipment.container_no }}</td>
-                <td>{{ shipment.hscode }}</td>
-                <td>{{ shipment.material_code }}</td>
-                <td>{{ shipment.material_name }}</td>
-                <td>{{ shipment.quantity }}</td>
-                <td>{{ shipment.quantity_unit }}</td>
-                <td>{{ shipment.net_weight }}</td>
-                <td>{{ shipment.gross_weight }}</td>
-                <td>{{ shipment.weight_unit }}</td>
-                <td>{{ shipment.volume }}</td>
-                <td>{{ shipment.volume_unit }}</td>
-                <td>{{ shipment.invoice_number }}</td>
-                <td>{{ shipment.pallet_no }}</td>
+                <td>{{ shipment._id }}</td>
+                <td>{{ shipment.ShipmentType }}</td>
+                <td>{{ shipment.OrderNumber }}</td>
+                <td>{{ shipment.OrderType }}</td>
+                <td>{{ shipment.SourceReferenceID }}</td>
+                <td>{{ shipment.DestinationReferenceID }}</td>
+                <td>{{ shipment.PrimaryMode }}</td>
+                <td>{{ shipment.ExpectedDeliveryDate }}</td>
+                <td>{{ shipment.Incoterm }}</td>
+                <td>{{ shipment.CargoType }}</td>
+                <td>{{ shipment.MaterialCode }}</td>
+                <td>{{ shipment.Quantity }}</td>
+                <td>{{ shipment.QuantityUnit }}</td>
+                <td>{{ shipment.ShipmentNumber }}</td>
               </tr>
             </tbody>
           </table>
+
           <p v-else>No MongoDB data available.</p>
         </div>
+
 
         <!-- PostgreSQL Data Table -->
         <div class="table-container" v-if="showPostgresData">
@@ -83,43 +84,67 @@
             <thead>
               <tr>
                 <th>ID</th>
-                <th>PO Number</th>
-                <th>Container No</th>
-                <th>HS Code</th>
+                <th>Shipment Type</th>
+                <th>Order Number</th>
+                <th>Order Type</th>
+                <th>Source Reference ID</th>
+                <th>Destination Reference ID</th>
+                <th>Primary Mode</th>
+                <th>Expected Delivery Date</th>
+                <th>Incoterm</th>
+                <th>Cargo Type</th>
                 <th>Material Code</th>
-                <th>Material Name</th>
                 <th>Quantity</th>
                 <th>Quantity Unit</th>
-                <th>Net Weight</th>
-                <th>Gross Weight</th>
-                <th>Weight Unit</th>
-                <th>Volume</th>
-                <th>Volume Unit</th>
-                <th>Invoice Number</th>
-                <th>Pallet No</th>
+                <th>Shipment Number</th>
               </tr>
             </thead>
             <tbody>
               <tr v-for="shipment in postgresData" :key="shipment.id">
                 <td>{{ shipment.id }}</td>
-                <td>{{ shipment.po_number }}</td>
-                <td>{{ shipment.container_no }}</td>
-                <td>{{ shipment.hscode }}</td>
-                <td>{{ shipment.material_code }}</td>
-                <td>{{ shipment.material_name }}</td>
+                <td>{{ shipment.shipmentType }}</td>
+                <td>{{ shipment.orderNumber }}</td>
+                <td>{{ shipment.orderType }}</td>
+                <td>{{ shipment.sourceReferenceId }}</td>
+                <td>{{ shipment.destinationReferenceId }}</td>
+                <td>{{ shipment.primaryMode }}</td>
+                <td>{{ shipment.expectedDeliveryDate }}</td>
+                <td>{{ shipment.incoterm }}</td>
+                <td>{{ shipment.cargoType }}</td>
+                <td>{{ shipment.materialCode }}</td>
                 <td>{{ shipment.quantity }}</td>
-                <td>{{ shipment.quantity_unit }}</td>
-                <td>{{ shipment.net_weight }}</td>
-                <td>{{ shipment.gross_weight }}</td>
-                <td>{{ shipment.weight_unit }}</td>
-                <td>{{ shipment.volume }}</td>
-                <td>{{ shipment.volume_unit }}</td>
-                <td>{{ shipment.invoice_number }}</td>
-                <td>{{ shipment.pallet_no }}</td>
+                <td>{{ shipment.quantityUnit }}</td>
+                <td>{{ shipment.shipmentNumber }}</td>
               </tr>
             </tbody>
           </table>
+
           <p v-else>No PostgreSQL data available.</p>
+        </div>
+
+        <!-- Location Data Table -->
+        <div class="table-container" v-if="showLocationData">
+          <h2>Location Data</h2>
+          <table v-if="locationData.length">
+            <thead>
+              <tr>
+                <th>Reference ID</th>
+                <th>Location</th> 
+                <th>Created At</th>
+                <th>Updated At</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr v-for="shipment in locationData" :key="shipment.id">
+                <td>{{ shipment.id }}</td>
+                <td>{{ shipment.referenceId }}</td>
+                <td>{{ shipment.createdAt }}</td>
+                <td>{{ shipment.updatedAt }}</td>
+              </tr>
+            </tbody>
+          </table>
+
+          <p v-else>No Location data available.</p>
         </div>
       </div>
     </div>
@@ -136,8 +161,10 @@ export default {
       message: '',
       mongoData: [],
       postgresData: [],
+      locationData: [],
       showMongoData: false,
       showPostgresData: false,
+      showLocationData: false,
       messageType: '' // 'error' or 'success'
     };
   },
@@ -151,29 +178,38 @@ export default {
       this.file = event.target.files[0];
     },
     async uploadFile() {
-      if (!this.file) {
-        this.message = 'Please select a file first.';
-        this.messageType = 'error';
-        return;
-      }
-
-      const formData = new FormData();
-      formData.append('file', this.file);
-
       try {
+        const formData = new FormData();
+        formData.append('file', this.file); // Ensure 'selectedFile' contains the file object
+
         const response = await axios.post('http://localhost:3000/upload', formData, {
           headers: {
             'Content-Type': 'multipart/form-data'
           }
         });
-        this.message = response.data.message;
-        this.messageType = 'success';
+
+        if (response.status === 200) {
+          // Handling successful file upload and processing
+          this.message = response.data.message;
+          this.messageType = 'success';
+        } else {
+          // Handle unexpected response status codes
+          this.message = 'Unexpected response from the server. Please try again.';
+          this.messageType = 'error';
+        }
       } catch (error) {
-        this.message = 'Error uploading file. Please try again.';
+        if (error.response && error.response.data) {
+          // Backend-specific error message from the server
+          this.message = error.response.data.message;
+        } else {
+          // Generic error message if no detailed error is provided
+          this.message = 'Error uploading file. Please try again.';
+        }
         this.messageType = 'error';
         console.error(error);
       }
     },
+
     downloadShipmentsFile() {
       const link = document.createElement('a');
       link.href = 'http://localhost:3000/files/sample-file.xlsx'; // Correct URL to match your server route
@@ -187,7 +223,9 @@ export default {
         const response = await axios.get('http://localhost:3000/data/mongo');
         this.mongoData = response.data;
         this.showMongoData = true;
-        this.showPostgresData = false; 
+        this.showPostgresData = false;
+        this.showLocationData = false;
+        this.showCitiesData = false;
       } catch (error) {
         console.error('Error fetching MongoDB data:', error);
       }
@@ -197,11 +235,25 @@ export default {
         const response = await axios.get('http://localhost:3000/data/postgres');
         this.postgresData = response.data;
         this.showPostgresData = true;
-        this.showMongoData = false; 
+        this.showMongoData = false;
+        this.showLocationData = false;
+        this.showCitiesData = false; 
       } catch (error) {
         console.error('Error fetching PostgreSQL data:', error);
       }
-    }
+    },
+    async fetchLocationData() {
+      try {
+        const response = await axios.get('http://localhost:3000/data/location');
+        this.locationData = response.data;
+        this.showLocationData = true;
+        this.showMongoData = false;
+        this.showPostgresData = false;
+        this.showCitiesData = false;
+      } catch (error) {
+        console.error('Error fetching Location data:',error);
+      }
+    },
   }
 };
 </script>
@@ -261,7 +313,7 @@ export default {
 .heading {
   font: bold;
   text-decoration: underline;
-  margin-top: 100px; 
+  margin-top: 100px;
 }
 
 .file-input {
@@ -321,11 +373,11 @@ export default {
 .table-container {
   margin-top: 30px;
   width: 100%;
-  max-height: 400px; 
-  overflow-y: auto;  
-  border: 1px solid #ddd; 
+  max-height: 400px;
+  overflow-y: auto;
+  border: 1px solid #ddd;
   padding: 10px;
-  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1); 
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
   background-color: white;
 }
 
@@ -335,7 +387,8 @@ table {
   margin-top: 20px;
 }
 
-th, td {
+th,
+td {
   padding: 12px;
   text-align: left;
   border: 1px solid #ddd;
