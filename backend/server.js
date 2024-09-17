@@ -1,19 +1,25 @@
 const express = require('express');
 const multer = require('multer');
 const Bull = require('bull');
+const uuid = require('uuid');
 const mongoose = require('mongoose');
 const { Pool } = require('pg');
 const cors = require('cors');
 const S3rver = require('s3rver');
 const XLSX = require('xlsx');
-const File = require('./datamongo/data');
 const fs = require('fs');
 const path = require('path');
 const AWS = require('aws-sdk');
 const sequelize = require('./config/databasepostgress');
-const FilePostgress = require('./models/schema/postgresSchema');
+const Shipments = require('./models/pgsql/shipmentsql');
+const Products = require('./models/mongo/productmongo');
+const Cities = require('./models/pgsql/citysql');
 require('dotenv').config();
-const fileSchema = require('./joi_validatioin/valid')
+const Excel = require('./utils/excelRead');
+const { productValidationSchema } = require('./utils/headerValidation');
+const AWSS3Wrapper = require('./config/s3config');
+const produceJobFromS3 = require('./producer');
+// require('./consumer');
 
 const app = express();
 const port = 3000;
@@ -22,13 +28,7 @@ const port = 3000;
 app.use(cors());
 app.use(express.json());
 
-// Start fake S3 server
-const s3rver = new S3rver({
-  port: 4569,
-  hostname: 'localhost',
-  silent: false,
-  directory: './fake-s3-storage'
-});
+
 
 
 // Configure AWS SDK to use fake S3
@@ -40,36 +40,33 @@ const s3 = new AWS.S3({
   signatureVersion: 'v4'
 });
 
-// Create a bucket 
-const bucketName = 'my-bucket';
-s3.createBucket({ Bucket: bucketName }, (err) => {
-  if (err && err.code !== 'BucketAlreadyOwnedByYou') {
-    console.error('Error creating S3 bucket', err);
-  } else {
-    console.log(`Bucket '${bucketName}' is ready`);
-  }
-});
 
-// Configure multer for file uploads
-const storage = multer.memoryStorage();
-const upload = multer({
-  storage: storage,
-  fileFilter: (req, file, cb) => {
-    if (file.fieldname === 'file') {
-      cb(null, true);
-    } else {
-      cb(new multer.MulterError('Unexpected field'), false);
-    }
-  }
-});
+
+// Setup Multer for file uploads
+const upload = multer({ storage: multer.memoryStorage() });
+
+// Create the bucket once when the server starts
+const s3Wrapper = new AWSS3Wrapper();
+s3Wrapper.createBucket();
+
+
+
+function generateUniqueS3Key(originalFileName) {
+  console.log(originalFileName);
+  const uniqueSuffix = Math.floor(10000 + Math.random() * 90000); // Generate a unique 5-digit number
+  const baseFileName = originalFileName.split('.')[0]; // Get the base file name (without extension)
+  const fileExtension = originalFileName.split('.').pop(); // Get file extension
+  const nameFile = `${baseFileName}-${uniqueSuffix}.${fileExtension}`; 
+  console.log(nameFile);// Combine base name, unique key, and extension
+  return nameFile;
+}
 
 // Configure Bull queue
 const postgresQueue = new Bull('postgresQueue');
 const mongoQueue = new Bull('mongoQueue');
 
 // Database connections
-const mongoUri = process.env.MONGODB_URI;
-console.log("🚀 ~ mongoUri:", mongoUri)
+const mongoUri = process.env.MONGO_URI;
 
 if (!mongoUri) {
   console.error('MONGODB_URI is not set in the environment variables');
@@ -89,7 +86,7 @@ sequelize.authenticate()
     console.log('PostgreSQL database & tables created !!');
   })
   .catch(err => {
-    console.error('Unable to connect to the postgresql database : ',err);
+    console.error('Unable to connect to the postgresql database : ', err);
   });
 
 
@@ -103,40 +100,35 @@ app.post('/upload', upload.single('file'), async (req, res) => {
   if (!req.file) {
     return res.status(400).json({ message: 'No file uploaded.' });
   }
-  // converting to json
-  try {
-    const workbook = XLSX.read(req.file.buffer);
-    const sheetName = workbook.SheetNames[0];
-    const sheet = workbook.Sheets[sheetName];
-    const data = XLSX.utils.sheet_to_json(sheet);
-    console.log(data);
 
-    // Validate data
-    const bulkOps = [];
-    for (const row of data) {
-      const { error } = fileSchema.validate(row);
-      if (error) {
-        console.error('Validation error:', error.details.map(detail => detail.message).join(', '));
-        continue;
-      }
-      bulkOps.push(row);
+  try {
+    const excel = new Excel(req.file);
+    const { jsonData, worksheet } = await excel.readExcel();
+
+    const areHeadersValid = excel.matchHeaders(worksheet);
+    if (!areHeadersValid) {
+      return res.status(400).json({ message: 'Invalid headers in the file' });
     }
 
-    // Upload the JSON file to Fake S3
-    const params = {
-      Bucket: bucketName,
-      Key: `${req.file.originalname}.json`,
-      Body: JSON.stringify(bulkOps),
-      ContentType: 'application/json'
-    };
-    await s3.upload(params).promise();
+    const cleanedData = excel.cleanData(jsonData);
+    const cleanedDataString = JSON.stringify(cleanedData); // Convert cleaned data to string
 
-    // Add a job to the queue for processing
-    await postgresQueue.add({ filename: `${req.file.originalname}.json`, data });
-    await mongoQueue.add({ filename: `${req.file.originalname}.json`, data });
+    
+    const uniqueS3Key = generateUniqueS3Key(req.file.originalname);
+    
+    // Upload the cleaned data to Fake S3 (either as a new file or overwrite)
+    const s3Wrapper = new AWSS3Wrapper(cleanedDataString, req.file.originalname);
+    await s3Wrapper.putObject(uniqueS3Key); // Store the data with the unique key
 
-    res.json({ message: `File ${req.file.originalname} uploaded, validated, and queued for processing.` });
-  } catch (error) {
+    
+
+
+    
+    produceJobFromS3(uniqueS3Key);
+    res.json({
+      message: `File ${req.file.originalname} uploaded, validated, and queued for processing.`,
+      uniqueS3Key: `${req.file.originalname}.json`
+  });  } catch (error) {
     console.error('Error in file upload or processing:', error);
     res.status(500).json({ message: 'Error processing the file.', error: error.message });
   }
@@ -144,7 +136,7 @@ app.post('/upload', upload.single('file'), async (req, res) => {
 
 
 app.get('/files/sample-file.xlsx', (req, res) => {
-  const filePath = path.join(__dirname, 'shipments.xlsx'); 
+  const filePath = path.join(__dirname, 'samplefileexe.xlsx');
   res.download(filePath, 'sample-file.xlsx', (err) => {
     if (err) {
       console.error('Error sending file:', err);
@@ -153,31 +145,85 @@ app.get('/files/sample-file.xlsx', (req, res) => {
   });
 });
 
+const bucketName = 'my-bucket'; // Define your bucket name here
+
+
 // Route to list files in S3 bucket
 app.get('/files', async (req, res) => {
   try {
     const params = {
-      Bucket: 'my-bucket' 
+      Bucket: bucketName
     };
-    const data = await s3.listObjects(params).promise();
-    console.log(data);
-    const files = data.Contents.map(file => ({
-      key: file.Key,
-      lastModified: file.LastModified,
-      size: file.Size
-    }));
-    res.json(files);
+
+    // Fetch the list of objects in the bucket
+    const data = await s3.listObjectsV2(params).promise();
+
+    if (!data.Contents || data.Contents.length === 0) {
+      return res.status(404).json({ message: 'No files found in the bucket.' });
+    }
+
+    // Map the files to the format you want (fileName, lastModified, size)
+    const files = await Promise.all(
+      data.Contents.map(async (file) => {
+        const objectDetails = await s3
+          .headObject({
+            Bucket: bucketName,
+            Key: file.Key,
+          })
+          .promise();
+
+        return {
+          key: file.Key, // The file key (including unique identifier)
+          lastModified: file.LastModified, // Timestamp when file was last modified
+          size: objectDetails.ContentLength // Size in bytes
+        };
+      })
+    );
+
+    res.json(files); // Send the response in JSON format
   } catch (error) {
-    console.error(error);
+    console.error('Error retrieving files from S3:', error);
     res.status(500).send('Error retrieving files from S3.');
   }
 });
+
+app.delete('/empty-bucket', async (req, res) => {
+  try {
+    const params = {
+      Bucket: bucketName,
+    };
+
+    // List all objects in the bucket
+    const data = await s3.listObjectsV2(params).promise();
+
+    if (data.Contents.length === 0) {
+      return res.status(200).json({ message: 'The bucket is already empty.' });
+    }
+
+    // Delete each object one by one
+    for (const file of data.Contents) {
+      const deleteParams = {
+        Bucket: bucketName,
+        Key: file.Key,
+      };
+      await s3.deleteObject(deleteParams).promise();
+    }
+
+    res.status(200).json({ message: 'Bucket emptied successfully.' });
+  } catch (error) {
+    console.error('Error emptying the bucket:', error);
+    res.status(500).json({ message: 'Error emptying the bucket.', error: error.message });
+  }
+});
+
+
+
 
 
 // Route to fetch data from PostgreSQL
 app.get('/data/postgres', async (req, res) => {
   try {
-    const data = await FilePostgress.findAll();
+    const data = await Shipments.findAll();
     res.json(data);
   } catch (error) {
     console.error('Error fetching data from PostgreSQL:', error);
@@ -188,13 +234,25 @@ app.get('/data/postgres', async (req, res) => {
 // Route to fetch data from MongoDB
 app.get('/data/mongo', async (req, res) => {
   try {
-    const data = await File.find();
+    const data = await Products.find({});
     res.json(data);
+    
   } catch (error) {
     console.error('Error fetching data from MongoDB:', error);
     res.status(500).json({ message: 'Error fetching data from MongoDB.', error: error.message });
   }
 });
+
+app.get('/data/location', async (req, res) => {
+  try {
+    const data = await Cities.findAll();
+    res.json(data);
+  } catch (error) {
+    console.log('Error fetching data from Table:', error);
+    res.status(500).json({ message: 'Error fetching data from Table:', error: error.message});
+  }
+});
+
 
 app.use((err, req, res, next) => {
   console.error('Unhandled error:', err);
