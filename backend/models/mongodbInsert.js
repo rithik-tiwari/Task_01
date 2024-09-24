@@ -1,37 +1,30 @@
-const Product = require('./mongo/productmongo'); // Adjust the path to your Product schema
-const Location = require('./mongo/locationmongo'); // Adjust the path to your Location schema
+const Product = require('./mongo/productmongo'); 
+const Location = require('./mongo/locationmongo'); 
 
 async function insertIntoMongoDB(data) {
   try {
-    // Step 1: Create a location master array with SourceReferenceID and DestinationReferenceID
     let locationMaster = [];
 
     data.forEach(row => {
       locationMaster.push(row.SourceReferenceID, row.DestinationReferenceID);
     });
 
-    // Step 2: Remove duplicates
     locationMaster = [...new Set(locationMaster)];
 
-    // Step 3: Create index and insert unique locations into Location table
-    const locationMap = {}; // This will store the mapping of location IDs
+    const locationMap = {}; 
 
     for (let i = 0; i < locationMaster.length; i++) {
       const locationName = locationMaster[i];
 
-      // Check if the location already exists in the Location table
       let location = await Location.findOne({ locationName });
 
       if (!location) {
-        // If not, insert the location into the Location collection
         location = await Location.create({ locationName });
       }
 
-      // Map the location name to its ObjectId
       locationMap[locationName] = location._id;
     }
 
-    // Step 4: Now, map the data to the schema fields and insert into MongoDB
     await Product.insertMany(data.map(row => ({
       ShipmentType: row.ShipmentType,
       OrderNumber: row.OrderNumber,
@@ -39,11 +32,11 @@ async function insertIntoMongoDB(data) {
       PrimaryMode: row.PrimaryMode,
       ExpectedDeliveryDate: row.ExpectedDeliveryDate,
       Incoterm: row.Incoterm,
-      SourceReferenceID: locationMap[row.SourceReferenceID], // Map to the ObjectId from Location
-      DestinationReferenceID: locationMap[row.DestinationReferenceID], // Map to the ObjectId from Location
+      SourceReferenceID: locationMap[row.SourceReferenceID], 
+      DestinationReferenceID: locationMap[row.DestinationReferenceID], 
       CargoType: row.CargoType,
       MaterialCode: row.MaterialCode,
-      Quantiy: row.Quantiy, // Fix typo: should be Quantity in the schema
+      Quantiy: row.Quantiy, 
       QuantityUnit: row.QuantityUnit,
       ShipmentNumber: row.ShipmentNumber || null
     })));
