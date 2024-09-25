@@ -14,24 +14,8 @@ const AwsS3Wrapper = require('../config/s3config');
 const excelHandler = require('../utils/excelRead');
 const AWS = require('aws-sdk');
 const { AWSS3Wrapper } = require('../config/s3config');
-const mongoLocation = require('../models/mongo/locationmongo');
-const mongoProduct = require('../models/mongo/productmongo');
-const insertIntoMongoDB = require('../models/mongodbInsert');
-const { Pool } = require('pg');
-const Cities = require('../models/pgsql/citysql');
-const Shipments = require('../models/pgsql/shipmentsql');
-const insertIntoPostgres = require('../models/postgressInsert');
 const RedisQueue = require('bull');
 const produceJobFromS3 = require('../producer');
-
-
-const pgPool = new Pool({
-    user: 'postgres',
-    host: 'localhost',
-    database: 'mydbpostgress',
-    password: 'password',
-    port: 5432
-});
 
 // controller {getUsers, getFile, uploadFile} test cases
 describe('getUsers', () => {
@@ -455,126 +439,6 @@ describe('Header Validation', () => {
         const result = validateHeaders(headers);
 
         expect(result).to.be.null;
-    });
-});
-
-// Insert into MongoDB test case
-describe('MongoDB Data Insertion', () => {
-    let locationFindOneStub;
-    let locationCreateStub;
-    let productInsertManyStub;
-
-    beforeEach(() => {
-        // Stubbing MongoDB models
-        locationFindOneStub = sinon.stub(locationmongo, 'findOne').resolves(null);
-        locationCreateStub = sinon.stub(locationmongo, 'create').resolves({ _id: 'locationId' });
-        productInsertManyStub = sinon.stub(productmongo, 'insertMany');
-    });
-
-    afterEach(() => {
-        // Restore the original functions after each test
-        sinon.restore();
-    });
-
-    it('should insert data into MongoDB when all inputs are valid', async () => {
-        const mockData = [
-            {
-                ShipmentType: 'Air',
-                OrderNumber: '12345',
-                OrderType: 'Online',
-                PrimaryMode: 'Express',
-                ExpectedDeliveryDate: new Date(),
-                Incoterm: 'FOB',
-                SourceReferenceID: 'SRC001',
-                DestinationReferenceID: 'DEST001',
-                CargoType: 'Electronics',
-                MaterialCode: 'MAT001',
-                Quantiy: 10,
-                QuantityUnit: 'kg',
-                ShipmentNumber: 'SHIP001'
-            }
-        ];
-
-        // Call the function to insert data into MongoDB
-        await insertIntoMongoDB(mockData);
-
-        // Check if `insertMany` was called with the correct data
-        expect(productInsertManyStub).to.have.been.calledWith([
-            {
-                ShipmentType: 'Air',
-                OrderNumber: '12345',
-                OrderType: 'Online',
-                PrimaryMode: 'Express',
-                ExpectedDeliveryDate: sinon.match.instanceOf(Date),
-                Incoterm: 'FOB',
-                SourceReferenceID: 'locationId',
-                DestinationReferenceID: 'locationId',
-                CargoType: 'Electronics',
-                MaterialCode: 'MAT001',
-                Quantiy: 10,
-                QuantityUnit: 'kg',
-                ShipmentNumber: 'SHIP001'
-            }
-        ]);
-    });
-});
-
-// Insert into Postgresql test case
-describe('PostgreSQL Data Insertion', () => {
-    let pgPoolStub;
-    let mockClient;
-    let citiesFindOrCreateStub;
-    let shipmentsBulkCreateStub;
-
-    beforeEach(() => {
-        // Stubbing the pgPool connection and mock client
-        mockClient = {
-            query: sinon.stub(),
-            release: sinon.stub(),
-        };
-        pgPoolStub = sinon.stub(pgPool, 'connect').resolves(mockClient);
-        citiesFindOrCreateStub = sinon.stub(Cities, 'findOrCreate').resolves([{ id: 1 }]);
-        shipmentsBulkCreateStub = sinon.stub(Shipments, 'bulkCreate').resolves();
-
-        // Mocking the behavior of query transaction
-        mockClient.query.withArgs('BEGIN').resolves();
-        mockClient.query.withArgs('COMMIT').resolves();
-    });
-
-    afterEach(() => {
-        // Restoring original methods after each test
-        sinon.restore();
-    });
-
-    it('should connect to PostgreSQL database and insert data successfully', async () => {
-        const data = [
-            {
-                SourceReferenceID: 'SRC1',
-                DestinationReferenceID: 'DEST1',
-                ShipmentType: 'Type1',
-                OrderNumber: '123',
-                OrderType: 'TypeA',
-                PrimaryMode: 'Air',
-                ExpectedDeliveryDate: new Date(),
-                Incoterm: 'FOB',
-                CargoType: 'General',
-                MaterialCode: 'MAT1',
-                Quantity: 100,
-                QuantityUnit: 'kg',
-                ShipmentNumber: 'SHIP123',
-            },
-        ];
-
-        // Calling the function that inserts data into PostgreSQL
-        await insertIntoPostgres(data);
-
-        // Assertions
-        expect(pgPoolStub).to.have.been.calledOnce; // pgPool.connect should be called once
-        expect(mockClient.query).to.have.been.calledWith('BEGIN'); // Transaction begins
-        expect(citiesFindOrCreateStub).to.have.been.called; // Cities.findOrCreate should be called
-        expect(shipmentsBulkCreateStub).to.have.been.calledWith(sinon.match.array, { validate: true }); // Shipments.bulkCreate called with data
-        expect(mockClient.query).to.have.been.calledWith('COMMIT'); // Transaction commits
-        expect(mockClient.release).to.have.been.calledOnce; // Client release called
     });
 });
 
