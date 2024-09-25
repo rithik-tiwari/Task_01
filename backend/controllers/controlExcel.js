@@ -37,3 +37,6 @@ const uploadFile = async (req, reply) => {
     }
 };
 module.exports = { getUsers, getFile, uploadFile };
+
+
+
